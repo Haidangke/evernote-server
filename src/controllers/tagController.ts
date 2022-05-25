@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
+import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
 import Note from '../models/noteModel';
 import Tag from '../models/tagModel';
 
 const tagController = {
-    createTag: async (req: Request, res: Response) => {
+    createTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
-            const { uid, name } = req.body;
+            const uid = req.user.uid;
+            const { name } = req.body;
 
             if (!name)
                 return res.status(400).json({
@@ -18,7 +20,7 @@ const tagController = {
                 name,
             });
 
-            tag.save();
+            await tag.save();
             res.status(200).json({
                 tag,
                 status: 'success',
@@ -30,25 +32,19 @@ const tagController = {
     },
 
     //thêm thẻ
-    addTag: async (req: Request, res: Response) => {
+    addTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
+            const uid = req.user.uid;
             const { noteId, listTagId } = req.body;
-            const listTag = [];
             const note = await Note.findById(noteId);
-            const curTag = note.tag;
-            const curTagId = curTag.map((x) => x.id);
+            const curTag = listTagId
+                .concat(note.tag)
+                .filter((item, pos) => listTagId.concat(note.tag).indexOf(item) == pos);
 
-            for (let i = 0; i < listTagId.length; i++) {
-                if (!curTagId.includes(listTagId[i])) {
-                    const tag = await Tag.findById(listTagId[i]);
-                    listTag.push(tag);
-                }
-            }
-
-            const newNote = await Note.findByIdAndUpdate(
-                noteId,
+            const newNote = await Note.findOneAndUpdate(
+                { uid, noteId },
                 {
-                    tag: [...curTag, ...listTag],
+                    tag: curTag,
                 },
                 { new: true }
             );
@@ -64,38 +60,39 @@ const tagController = {
     },
 
     //xóa thẻ
-    deleteTag: async (req: Request, res: Response) => {
+    deleteTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
+            const uid = req.user.uid;
             const id = req.params.id;
-            await Tag.findByIdAndRemove(id);
-            await Note.updateMany(
-                { 'tag._id': id },
-                {
-                    $pull: {
-                        tag: { _id: id },
-                    },
-                }
-            );
-            res.json('success');
+
+            await Note.updateMany({ tag: id, uid }, { $pull: { tag: id } });
+            res.status(200).json({ status: 'success', msg: 'delete tag successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
     },
 
     //loại bỏ thẻ
-    removeTag: async (req: Request, res: Response) => {
+    removeTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
-            const { noteId, tagId } = req.query;
+            const uid = req.user.uid;
+            const { noteId, tagId } = req.body;
+            console.log({ noteId });
             const note = await Note.findById(noteId);
-
+            console.log({ note });
             const tag = note.tag;
+
             const newTag = note.tag.map((tag) => tag._id);
             tag.splice(newTag.indexOf(tagId), 1);
 
-            await Note.findByIdAndUpdate(noteId, {
-                ...note,
-                tag,
-            });
+            await Note.findOneAndUpdate(
+                { uid, noteId },
+                {
+                    ...note,
+                    tag,
+                }
+            );
+            res.status(200).json({ status: 'success', msg: 'remove tag from note successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

@@ -17,13 +17,11 @@ const noteSchema = new Schema(
             type: String,
             default: '',
         },
-        tag: {
-            type: [tagSchema],
-            default: [],
-        },
+        tag: { type: [{ type: Types.ObjectId, ref: 'Tag' }], default: [] },
         notebook: {
             type: Types.ObjectId,
             ref: 'Notebook',
+            required: true,
         },
         isDelete: {
             type: Boolean,
