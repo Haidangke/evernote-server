@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
+import Note from '../models/noteModel';
 import Todo from '../models/todoModel';
 
 const todoController = {
@@ -8,8 +9,11 @@ const todoController = {
             const uid = req.user.uid;
             const { noteId } = req.body;
 
-            if (!noteId)
-                return res.status(400).json({ status: 'failed', msg: 'Note id is not valid !' });
+            const note = await Note.findById(noteId);
+            if (!note)
+                return res
+                    .status(400)
+                    .json({ status: 'failed', msg: 'this note does not exist !' });
 
             const todo = new Todo({
                 uid,
@@ -28,8 +32,11 @@ const todoController = {
             const todoId = req.params.id;
             const uid = req.user.uid;
             const { noteId, name, expiration_date, isComplete } = req.body;
-            if (!noteId)
-                return res.status(400).json({ status: 'failed', msg: 'Note id is not valid !' });
+            const note = await Note.findById(noteId);
+            if (!note)
+                return res
+                    .status(400)
+                    .json({ status: 'failed', msg: 'this note does not exist !' });
             const todo = await Todo.findOneAndUpdate(
                 { _id: todoId, uid, noteId },
                 {
@@ -50,8 +57,11 @@ const todoController = {
             const todoId = req.params.id;
             const uid = req.user.uid;
             const { noteId } = req.body;
-            if (!noteId)
-                return res.status(400).json({ status: 'failed', msg: 'Note id is not valid !' });
+            const note = await Note.findById(noteId);
+            if (!note)
+                return res
+                    .status(400)
+                    .json({ status: 'failed', msg: 'this note does not exist !' });
 
             await Todo.findOneAndDelete({ uid, noteId, _id: todoId });
             res.status(200).json({ status: 'sucess', msg: 'delete todo success !' });

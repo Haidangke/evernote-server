@@ -35,16 +35,20 @@ const tagController = {
     addTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { noteId, listTagId } = req.body;
-            const note = await Note.findById(noteId);
-            const curTag = listTagId
-                .concat(note.tag)
-                .filter((item, pos) => listTagId.concat(note.tag).indexOf(item) == pos);
+            const { noteId, tags } = req.body;
+            const note = await Note.findOne({ _id: noteId, uid });
+
+            if (!note)
+                return res.status(400).json({ status: 'failed', msg: 'this note was not found !' });
+            const curTags = [...note.tags];
+            tags.forEach((tag) => {
+                if (!curTags.map((x) => x.toString()).includes(tag)) curTags.push(tag);
+            });
 
             const newNote = await Note.findOneAndUpdate(
-                { uid, noteId },
+                { uid, _id: noteId },
                 {
-                    tag: curTag,
+                    tags,
                 },
                 { new: true }
             );
@@ -65,7 +69,7 @@ const tagController = {
             const uid = req.user.uid;
             const id = req.params.id;
 
-            await Note.updateMany({ tag: id, uid }, { $pull: { tag: id } });
+            await Note.updateMany({ tags: id, uid }, { $pull: { tags: id } });
             res.status(200).json({ status: 'success', msg: 'delete tag successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
@@ -76,20 +80,18 @@ const tagController = {
     removeTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { noteId, tagId } = req.body;
-            console.log({ noteId });
+            const { noteId, tag } = req.body;
             const note = await Note.findById(noteId);
-            console.log({ note });
-            const tag = note.tag;
+            const curTag = [...note.tags];
 
-            const newTag = note.tag.map((tag) => tag._id);
-            tag.splice(newTag.indexOf(tagId), 1);
+            const newTag = curTag.map((tag) => tag._id);
+            curTag.splice(newTag.indexOf(tag), 1);
 
             await Note.findOneAndUpdate(
                 { uid, noteId },
                 {
                     ...note,
-                    tag,
+                    tags: curTag,
                 }
             );
             res.status(200).json({ status: 'success', msg: 'remove tag from note successfully !' });

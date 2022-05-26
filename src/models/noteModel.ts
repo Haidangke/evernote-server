@@ -17,7 +17,7 @@ const noteSchema = new Schema(
             type: String,
             default: '',
         },
-        tag: { type: [{ type: Types.ObjectId, ref: 'Tag' }], default: [] },
+        tags: { type: [{ type: Types.ObjectId, ref: 'Tag' }], default: [] },
         notebook: {
             type: Types.ObjectId,
             ref: 'Notebook',
@@ -29,7 +29,8 @@ const noteSchema = new Schema(
         },
         contain: {
             type: [String],
-            default: [],
+            enum: ['nothing', 'code', 'image', 'url', 'email', 'date'],
+            default: ['nothing'],
         },
     },
     {
@@ -37,5 +38,8 @@ const noteSchema = new Schema(
     }
 );
 
+noteSchema.index({ title: 'text' });
 const Note = model('Note', noteSchema);
+
+Note.createIndexes({ title: 'text' });
 export default Note;

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
+import noteAPIfeatures from '../lib/note';
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
-import Notebook from '../models/notebookModel';
-import Note from '../models/noteModel';
-import Todo from '../models/todoModel';
+
+import { Note, Notebook, Todo } from '../models';
 
 const noteController = {
     getNote: async (req: IGetUserAuthInfoRequest, res: Response) => {
@@ -11,7 +11,7 @@ const noteController = {
             const noteId = req.params.id;
 
             const note = await Note.findOne({ _id: noteId, uid })
-                .populate('tag')
+                .populate('tags')
                 .populate('notebook');
             const todo = await Todo.find({ noteId });
             return res.status(200).json({
@@ -26,9 +26,19 @@ const noteController = {
     getAllNote: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { isDelete, listTagId, notebook } = req.body;
 
-            const notes = await Note.find({ uid });
+            const query = req.query;
+            const features = new noteAPIfeatures(Note.find({ uid }), query)
+                .pagination()
+                .sort()
+                .search()
+                .filterKey(['_sort', '_limit', '_page', '_search'])
+                .filterNote()
+                .filterKey(['tags'])
+                .filter();
+
+            const notes = await features.query;
+
             return res.json({ notes });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
@@ -67,14 +77,14 @@ const noteController = {
     updateNote: async (req: Request, res: Response) => {
         try {
             const noteId = req.params.id;
-            const { title, content, tag, notebook, isDelete, contain } = req.body;
+            const { title, content, tags, notebook, isDelete, contain } = req.body;
 
             const note = await Note.findByIdAndUpdate(
                 noteId,
                 {
                     title,
                     content,
-                    tag,
+                    tags,
                     notebook,
                     isDelete,
                     contain,
