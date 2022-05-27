@@ -2,13 +2,28 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-import User from '../models/userModel';
+import UserModel from '../models/userModel';
 import Notebook from '../models/notebookModel';
+import { IGetUserAuthInfoRequest, User } from '../middleware/verifyToken';
 
 let refreshTokens = [];
 
 const authController = {
-    getInfoUser: async (req: Request, res: Response) => {},
+    getInfoUser: async (req: IGetUserAuthInfoRequest, res: Response) => {
+        try {
+            const uid = req.user.uid;
+            const user = await UserModel.findById(uid);
+
+            delete user._doc.password;
+            res.status(200).json({
+                status: 'success',
+                msg: 'get info user successfully !',
+                data: { user },
+            });
+        } catch (error) {
+            res.status(500).json({ status: 'failed', msg: error.message });
+        }
+    },
     //Register
     register: async (req: Request, res: Response) => {
         try {
@@ -31,8 +46,8 @@ const authController = {
             const hashPassword = await bcrypt.hash(password, salt);
 
             //Create user
-            const userWithEmail = await User.findOne({ email });
-            const userWithUsername = await User.findOne({ username });
+            const userWithEmail = await UserModel.findOne({ email });
+            const userWithUsername = await UserModel.findOne({ username });
             if (userWithEmail)
                 return res.status(400).json({
                     status: 'failed',
@@ -44,7 +59,7 @@ const authController = {
                     msg: ' username already exists !',
                 });
 
-            const newUser = new User({
+            const newUser = new UserModel({
                 username,
                 email,
                 password: hashPassword,
@@ -57,11 +72,11 @@ const authController = {
                 isDefault: true,
             });
             await notebook.save();
-
+            delete newUser._doc.password;
             res.status(200).json({
                 status: 'failed',
                 msg: 'successful account registration !',
-                user: newUser,
+                data: newUser,
             });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
@@ -74,7 +89,7 @@ const authController = {
                 role: user.role,
             },
             process.env.JWT_ACCESS_KEY,
-            { expiresIn: '1d' }
+            { expiresIn: '5s' }
         );
         return accessToken;
     },
@@ -95,8 +110,8 @@ const authController = {
     login: async (req: Request, res: Response) => {
         try {
             const { password, email, username } = req.body;
-            const userWithEmail = await User.findOne({ email });
-            const userWithUsername = await User.findOne({ username });
+            const userWithEmail = await UserModel.findOne({ email });
+            const userWithUsername = await UserModel.findOne({ username });
             const user: any = userWithEmail || userWithUsername;
 
             if (user) {
@@ -104,12 +119,11 @@ const authController = {
 
                 if (comparePassword) {
                     //mật khẩu và (email hoặc tên người dùng) đúng
-                    const userNotPass = { ...user._doc };
-                    delete userNotPass.password;
+                    delete user._doc.password;
 
                     //jwt
-                    const accessToken = authController.generatorAccessToken(userNotPass);
-                    const refreshToken = authController.generatorRefreshToken(userNotPass);
+                    const accessToken = authController.generatorAccessToken(user);
+                    const refreshToken = authController.generatorRefreshToken(user);
                     refreshTokens.push(refreshToken);
 
                     res.cookie('refreshToken', refreshToken, {
@@ -119,12 +133,10 @@ const authController = {
                         secure: false,
                         maxAge: 90000,
                     });
-
                     return res.status(200).json({
                         status: 'sucess',
                         msg: 'logged in successfully !',
-                        accessToken,
-                        user: userNotPass,
+                        data: { user, accessToken },
                     });
                 } else {
                     //mật khẩu sai
@@ -157,8 +169,7 @@ const authController = {
 
     requestRefreshToken: async (req: Request, res: Response) => {
         try {
-            const refreshToken = req.cookies.refreshToken;
-            console.log({ refreshToken });
+            const refreshToken = req.cookies['refreshToken'];
             if (!refreshToken)
                 return res
                     .status(401)
@@ -169,16 +180,21 @@ const authController = {
                     .status(403)
                     .json({ status: 'failed', msg: 'refresh token is not valid !' });
 
-            jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (error, user) => {
+            jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (error, user: User) => {
+                console.log({ refreshTokenUser: user });
+                const newUser = {
+                    role: user.role,
+                    _id: user.uid,
+                };
                 if (error) {
                     return res
                         .status(403)
                         .json({ status: 'failed', msg: 'refresh token is not valid !' });
                 }
                 refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-
-                const newAccessToken = authController.generatorAccessToken(user);
-                const newRefreshToken = authController.generatorRefreshToken(user);
+                console.log({ userRe: user });
+                const newAccessToken = authController.generatorAccessToken(newUser);
+                const newRefreshToken = authController.generatorRefreshToken(newUser);
                 refreshTokens.push(newRefreshToken);
 
                 res.cookie('refreshToken', newRefreshToken, {
@@ -187,9 +203,8 @@ const authController = {
                     secure: false,
                 });
 
-                res.status(200).json({ status: 'success', accessToken: newAccessToken });
+                res.status(200).json({ status: 'success', data: newAccessToken });
             });
-            res.status(200).json({ refreshToken });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

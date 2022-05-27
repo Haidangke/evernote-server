@@ -1,28 +1,29 @@
-import express from 'express';
+import express, { Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
-import router from './routes';
 import cookieParser from 'cookie-parser';
 
+import router from './routes';
 dotenv.config();
 
 const app = express();
 
 //middleware
-app.use(cors());
+
+app.use(
+    cors({
+        origin: 'http://localhost:3000',
+        credentials: true,
+    })
+);
+
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-});
 
 //database
 const MONGO_URL = process.env.MONGODB_URL;

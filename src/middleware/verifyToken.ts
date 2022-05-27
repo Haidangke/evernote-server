@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-interface User {
+export interface User {
     uid: string;
     role: string;
 }

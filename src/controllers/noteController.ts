@@ -15,7 +15,7 @@ const noteController = {
                 .populate('notebook');
             const todo = await Todo.find({ noteId });
             return res.status(200).json({
-                note: { ...note._doc, todo },
+                data: { ...note._doc, todo },
                 status: 'success',
                 message: 'get note successfully !',
             });
@@ -39,7 +39,7 @@ const noteController = {
 
             const notes = await features.query;
 
-            return res.json({ notes });
+            return res.json({ data: notes, status: 'success', msg: 'get notes successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
@@ -65,7 +65,7 @@ const noteController = {
 
             await note.save();
             return res.status(200).json({
-                note: note,
+                data: note,
                 status: 'success',
                 msg: 'create note successfully !',
             });
@@ -92,7 +92,9 @@ const noteController = {
                 { new: true }
             );
 
-            return res.status(200).json({ note, status: 'success', message: 'note is updated' });
+            return res
+                .status(200)
+                .json({ data: note, status: 'success', message: 'note is updated' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
@@ -112,7 +114,7 @@ const noteController = {
         }
     },
 
-    deleteMulti: async (req: IGetUserAuthInfoRequest, res: Response) => {
+    cleanTrash: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
             await Note.deleteMany({ uid, isDelete: true });

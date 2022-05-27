@@ -19,9 +19,10 @@ const todoController = {
                 uid,
                 noteId,
             });
+            delete todo._doc.uid;
 
             await todo.save();
-            res.status(200).json({ status: 'sucess', msg: 'create todo success !', todo });
+            res.status(200).json({ status: 'sucess', msg: 'create todo success !', data: todo });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

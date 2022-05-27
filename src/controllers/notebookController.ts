@@ -19,9 +19,10 @@ const notebookController = {
                     .json({ status: 'failed', msg: 'the name of this manual has been used !' });
             const newNotebook = new Notebook({ uid, name });
             await newNotebook.save();
+            delete newNotebook._doc.uid;
 
             res.status(200).json({
-                notebook: newNotebook,
+                data: newNotebook,
                 status: 'success',
                 msg: 'create notebook successfully !',
             });

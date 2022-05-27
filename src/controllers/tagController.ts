@@ -19,10 +19,10 @@ const tagController = {
                 uid,
                 name,
             });
-
+            delete tag._doc._id;
             await tag.save();
             res.status(200).json({
-                tag,
+                data: tag,
                 status: 'success',
                 msg: 'create tag successfully !',
             });
@@ -45,16 +45,14 @@ const tagController = {
                 if (!curTags.map((x) => x.toString()).includes(tag)) curTags.push(tag);
             });
 
-            const newNote = await Note.findOneAndUpdate(
+            await Note.findOneAndUpdate(
                 { uid, _id: noteId },
                 {
                     tags,
                 },
                 { new: true }
             );
-
             res.status(200).json({
-                note: newNote,
                 status: 'success',
                 message: 'add tag successfully !',
             });
