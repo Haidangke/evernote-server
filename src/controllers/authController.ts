@@ -46,17 +46,12 @@ const authController = {
             const hashPassword = await bcrypt.hash(password, salt);
 
             //Create user
-            const userWithEmail = await UserModel.findOne({ email });
-            const userWithUsername = await UserModel.findOne({ username });
-            if (userWithEmail)
+            const user = await UserModel.findOne({ email });
+
+            if (user)
                 return res.status(400).json({
                     status: 'failed',
-                    msg: 'email already exists !',
-                });
-            if (userWithUsername)
-                return res.status(400).json({
-                    status: 'failed',
-                    msg: ' username already exists !',
+                    msg: 'Email này đã được sử dụng.',
                 });
 
             const newUser = new UserModel({
@@ -89,7 +84,7 @@ const authController = {
                 role: user.role,
             },
             process.env.JWT_ACCESS_KEY,
-            { expiresIn: '5s' }
+            { expiresIn: '1h' }
         );
         return accessToken;
     },
@@ -109,10 +104,8 @@ const authController = {
     //Login
     login: async (req: Request, res: Response) => {
         try {
-            const { password, email, username } = req.body;
-            const userWithEmail = await UserModel.findOne({ email });
-            const userWithUsername = await UserModel.findOne({ username });
-            const user: any = userWithEmail || userWithUsername;
+            const { password, email } = req.body;
+            const user = await UserModel.findOne({ email });
 
             if (user) {
                 const comparePassword = await bcrypt.compare(password, user.password);
@@ -136,20 +129,20 @@ const authController = {
                     return res.status(200).json({
                         status: 'sucess',
                         msg: 'logged in successfully !',
-                        data: { user, accessToken },
+                        data: { ...user._doc, accessToken },
                     });
                 } else {
                     //mật khẩu sai
                     return res.status(401).json({
                         status: 'failed',
-                        msg: (userWithEmail ? 'email' : 'username') + ' or password is incorrect !',
+                        msg: 'Email hoặc mật khẩu không chính xác.',
                     });
                 }
             } else {
                 // không có tài khoản
                 return res.status(401).json({
                     status: 'failed',
-                    msg: 'this account does not exist !',
+                    msg: 'Email này chưa đăng kí tài khoản.',
                 });
             }
         } catch (error) {
@@ -173,15 +166,14 @@ const authController = {
             if (!refreshToken)
                 return res
                     .status(401)
-                    .json({ status: 'failed', msg: 'you are not authenticated !' });
+                    .json({ status: 'failed', msg: 'you are not refreshToken !' });
 
-            if (!refreshTokens.includes(refreshToken))
-                return res
-                    .status(403)
-                    .json({ status: 'failed', msg: 'refresh token is not valid !' });
+            // if (!refreshTokens.includes(refreshToken))
+            //     return res
+            //         .status(403)
+            //         .json({ status: 'failed', msg: 'refresh token is not valid !' });
 
             jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (error, user: User) => {
-                console.log({ refreshTokenUser: user });
                 const newUser = {
                     role: user.role,
                     _id: user.uid,
@@ -192,7 +184,7 @@ const authController = {
                         .json({ status: 'failed', msg: 'refresh token is not valid !' });
                 }
                 refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-                console.log({ userRe: user });
+
                 const newAccessToken = authController.generatorAccessToken(newUser);
                 const newRefreshToken = authController.generatorRefreshToken(newUser);
                 refreshTokens.push(newRefreshToken);

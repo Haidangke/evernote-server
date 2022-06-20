@@ -61,7 +61,6 @@ const notebookController = {
                 });
             }
             if (isDefault) {
-                console.log({ isDefault });
                 await Notebook.findOneAndUpdate(
                     { uid, isDefault: true },
                     {

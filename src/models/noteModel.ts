@@ -15,7 +15,7 @@ const noteSchema = new Schema(
         },
         content: {
             type: String,
-            default: '',
+            default: '[{"children":[{"text":""}]}]',
         },
         tags: { type: [{ type: Types.ObjectId, ref: 'Tag' }], default: [] },
         notebook: {

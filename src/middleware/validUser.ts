@@ -4,7 +4,6 @@ import User from '../models/userModel';
 
 const validUser = async (req: IGetUserAuthInfoRequest, res: Response, next: NextFunction) => {
     const id = req.user.uid;
-    console.log({ id });
     if (!id) return res.status(400).json({ status: 'failed', msg: 'user id invalid !' });
 
     const user = await User.findById(id);
