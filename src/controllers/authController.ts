@@ -4,26 +4,32 @@ import jwt from 'jsonwebtoken';
 
 import UserModel from '../models/userModel';
 import Notebook from '../models/notebookModel';
-import { IGetUserAuthInfoRequest, User } from '../middleware/verifyToken';
+import { User } from '../middleware/verifyToken';
 
 let refreshTokens = [];
 
 const authController = {
-    getInfoUser: async (req: IGetUserAuthInfoRequest, res: Response) => {
+    checkEmail: async (req: Request, res: Response) => {
         try {
-            const uid = req.user.uid;
-            const user = await UserModel.findById(uid);
-
-            delete user._doc.password;
-            res.status(200).json({
-                status: 'success',
-                msg: 'get info user successfully !',
-                data: { user },
-            });
+            const { email } = req.body;
+            const user = await UserModel.findOne({ email });
+            if (!user) {
+                res.status(400).json({
+                    status: 'failed',
+                    msg: 'Email này đã chưa đăng kí tài khoản.',
+                    data: false,
+                });
+            } else {
+                res.status(200).json({
+                    status: 'success',
+                    data: true,
+                });
+            }
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
     },
+
     //Register
     register: async (req: Request, res: Response) => {
         try {
@@ -84,7 +90,7 @@ const authController = {
                 role: user.role,
             },
             process.env.JWT_ACCESS_KEY,
-            { expiresIn: '1h' }
+            { expiresIn: '1d' }
         );
         return accessToken;
     },
@@ -111,10 +117,6 @@ const authController = {
                 const comparePassword = await bcrypt.compare(password, user.password);
 
                 if (comparePassword) {
-                    //mật khẩu và (email hoặc tên người dùng) đúng
-                    delete user._doc.password;
-
-                    //jwt
                     const accessToken = authController.generatorAccessToken(user);
                     const refreshToken = authController.generatorRefreshToken(user);
                     refreshTokens.push(refreshToken);
@@ -126,10 +128,13 @@ const authController = {
                         secure: false,
                         maxAge: 90000,
                     });
+
+                    delete user._doc.password;
+                    delete user._doc._id;
                     return res.status(200).json({
                         status: 'sucess',
                         msg: 'logged in successfully !',
-                        data: { ...user._doc, accessToken },
+                        data: accessToken,
                     });
                 } else {
                     //mật khẩu sai

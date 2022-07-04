@@ -4,7 +4,7 @@ import authController from '../controllers/authController';
 const router = Router();
 
 router.use(cookieParser());
-router.get('/info', authController.getInfoUser);
+router.post('/email', authController.checkEmail);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/refresh', authController.requestRefreshToken);

@@ -38,6 +38,9 @@ const noteController = {
                 .filter();
 
             const notes = await features.query;
+            for (const note of notes) {
+                note.uid = undefined;
+            }
 
             return res.json({ data: notes, status: 'success', msg: 'get notes successfully !' });
         } catch (error) {
@@ -62,8 +65,8 @@ const noteController = {
                 uid,
                 notebook,
             });
-
             await note.save();
+            delete note._doc.uid;
             return res.status(200).json({
                 data: note,
                 status: 'success',

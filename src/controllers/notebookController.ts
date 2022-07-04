@@ -3,6 +3,24 @@ import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
 import Notebook from '../models/notebookModel';
 
 const notebookController = {
+    getNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
+        const uid = req.user.uid;
+        try {
+            const data = await Notebook.find({ uid });
+            const notebooks = [...data];
+            for (let i = 0; i < notebooks.length; i++) {
+                notebooks[i].uid = null;
+            }
+            res.status(200).json({
+                data: notebooks,
+                status: 'success',
+                msg: 'create notebook successfully !',
+            });
+        } catch (error) {
+            res.status(500).json({ status: 'failed', msg: error.message });
+        }
+    },
+
     createNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;

@@ -35,6 +35,10 @@ const userSchema = new Schema(
             required: true,
             default: 'user',
         },
+        scratch: {
+            type: String,
+            default: '',
+        },
     },
     { timestamps: true }
 );
