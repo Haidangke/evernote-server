@@ -29,7 +29,7 @@ const authController = {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
     },
-
+    
     //Register
     register: async (req: Request, res: Response) => {
         try {

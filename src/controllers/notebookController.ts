@@ -1,12 +1,14 @@
 import { Response } from 'express';
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
+import { User } from '../models';
 import Notebook from '../models/notebookModel';
 
 const notebookController = {
     getNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
         const uid = req.user.uid;
+
         try {
-            const data = await Notebook.find({ uid });
+            const data = await Notebook.find({ uid }).sort('-createdAt');
             const notebooks = [...data];
             for (let i = 0; i < notebooks.length; i++) {
                 notebooks[i].uid = null;
@@ -14,7 +16,6 @@ const notebookController = {
             res.status(200).json({
                 data: notebooks,
                 status: 'success',
-                msg: 'create notebook successfully !',
             });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
@@ -24,25 +25,25 @@ const notebookController = {
     createNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { name } = req.body;
-            if (!name)
+            const user = await User.findById(uid);
+            const email = user.email;
+            const { name, creator } = req.body;
+            if (!name || !creator)
                 return res.status(400).json({
                     status: 'failed',
-                    msg: 'the name of the notebook is not valid ! ',
+                    msg: 'thông tin của sổ tay không hợp lệ.',
                 });
             const notebook = await Notebook.findOne({ name });
             if (notebook)
-                return res
-                    .status(400)
-                    .json({ status: 'failed', msg: 'the name of this manual has been used !' });
-            const newNotebook = new Notebook({ uid, name });
+                return res.status(400).json({ status: 'failed', msg: 'sổ tay này đã tồn tại.' });
+            const newNotebook = new Notebook({ uid, name, creator: email });
             await newNotebook.save();
             delete newNotebook._doc.uid;
 
             res.status(200).json({
                 data: newNotebook,
                 status: 'success',
-                msg: 'create notebook successfully !',
+                msg: 'tạo sổ tay thành công.',
             });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
