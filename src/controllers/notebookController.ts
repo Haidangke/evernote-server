@@ -110,7 +110,7 @@ const notebookController = {
             const uid = req.user.uid;
             const id = req.params.id;
 
-            const notebook = await Notebook.findOne({ id, uid });
+            const notebook = await Notebook.findOne({ _id: id, uid });
             const isDefault = notebook.isDefault;
 
             if (isDefault) {
@@ -118,7 +118,7 @@ const notebookController = {
                     .status(400)
                     .json({ status: 'failed', msg: 'you cannot delete the default notebook !' });
             }
-            await Notebook.findOneAndRemove({ id, uid });
+            await Notebook.findOneAndRemove({ _id: id, uid });
             res.status(200).json({ status: 'success', msg: 'delete notebook successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
