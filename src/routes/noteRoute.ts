@@ -1,6 +1,5 @@
 import express from 'express';
 import noteController from '../controllers/noteController';
-import validUser from '../middleware/validUser';
 const router = express.Router();
 
 router.get('/', noteController.getAllNote);

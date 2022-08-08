@@ -103,10 +103,11 @@ const noteController = {
         }
     },
 
-    deleteNote: async (req: Request, res: Response) => {
+    deleteNote: async (req: IGetUserAuthInfoRequest, res: Response) => {
+        const uid = req.user.uid;
         try {
             const noteId = req.params.id;
-            await Note.findByIdAndRemove(noteId);
+            await Note.findOneAndDelete({ _id: noteId, uid });
 
             res.status(200).json({
                 status: 'success',

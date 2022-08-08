@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
-import { User } from '../models';
+import { Note, User } from '../models';
 import Notebook from '../models/notebookModel';
 
 const notebookController = {
@@ -119,6 +119,8 @@ const notebookController = {
                     .json({ status: 'failed', msg: 'you cannot delete the default notebook !' });
             }
             await Notebook.findOneAndRemove({ _id: id, uid });
+            await Note.deleteMany({ notebook: id });
+
             res.status(200).json({ status: 'success', msg: 'delete notebook successfully !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
