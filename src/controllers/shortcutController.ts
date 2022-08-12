@@ -16,15 +16,23 @@ const shortcutMiddleware = {
     createShortcut: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { type, typeId, name } = req.body;
-            if (!type || !typeId || !name) {
+            const { type, name } = req.body;
+            if (!type || !name) {
                 return res.status(400).json({ status: 'failed', msg: 'dữ liệu không hợp lệ' });
             }
 
-            const shortcut = new Shortcut({ type, typeId, name, uid });
+            const shortcut = new Shortcut({
+                type: { _id: type._id, name: type.name, value: type.value },
+                name,
+                uid,
+            });
             await shortcut.save();
 
-            res.status(200).json({ status: 'success', msg: 'tạo lỗi tắt thành công' });
+            res.status(200).json({
+                status: 'success',
+                msg: 'tạo lỗi tắt thành công',
+                data: shortcut,
+            });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

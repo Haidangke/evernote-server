@@ -9,14 +9,20 @@ const shortcutModel = new Schema(
         },
 
         type: {
-            type: String,
-            enum: ['note', 'notebook'],
-            required: true,
-        },
-
-        typeId: {
-            type: String,
-            required: true,
+            _id: {
+                type: String,
+                required: true,
+            },
+            name: {
+                type: String,
+                enum: ['note', 'notebook'],
+                required: true,
+            },
+            value: {
+                type: String,
+                enum: ['n', 'b'],
+                required: true,
+            },
         },
 
         name: {
