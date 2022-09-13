@@ -23,7 +23,8 @@ const noteSchema = new Schema(
             ref: 'Notebook',
             required: true,
         },
-        isDelete: {
+        isTrash: {
+            required: true,
             type: Boolean,
             default: false,
         },

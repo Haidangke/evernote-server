@@ -80,7 +80,7 @@ const noteController = {
     updateNote: async (req: Request, res: Response) => {
         try {
             const noteId = req.params.id;
-            const { title, content, tags, notebook, isDelete, contain } = req.body;
+            const { title, content, tags, notebook, isDelete, contain, isTrash } = req.body;
 
             const note = await Note.findByIdAndUpdate(
                 noteId,
@@ -91,6 +91,7 @@ const noteController = {
                     notebook,
                     isDelete,
                     contain,
+                    isTrash,
                 },
                 { new: true }
             );
