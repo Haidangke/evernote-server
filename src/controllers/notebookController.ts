@@ -54,52 +54,31 @@ const notebookController = {
         try {
             const id = req.params.id;
             const uid = req.user.uid;
-            const { name, isDefault } = req.body;
-            if (!name && !isDefault)
-                return res.status(400).json({
-                    status: 'failed',
-                    msg: 'invalid update information !',
-                });
-            if (name) {
-                const notebook = await Notebook.findOne({ name, uid });
-                if (notebook)
-                    return res
-                        .status(400)
-                        .json({ status: 'failed', msg: 'the name of this manual has been used !' });
-                const newNotebook = await Notebook.findOneAndUpdate(
-                    { _id: id, uid },
-                    {
-                        name,
-                    },
-                    { new: true }
-                );
-                res.status(200).json({
-                    notebook: newNotebook,
-                    status: 'success',
-                    msg: 'update name notebook successfully !',
-                });
-            }
+            const { name, isDefault, isShortcut } = req.body;
+
             if (isDefault) {
-                await Notebook.findOneAndUpdate(
+                await Notebook.updateMany(
                     { uid, isDefault: true },
                     {
                         isDefault: false,
                     }
                 );
-                const newNotebook = await Notebook.findOneAndUpdate(
-                    { _id: id, uid },
-                    {
-                        isDefault,
-                    },
-                    { new: true }
-                );
-
-                res.status(200).json({
-                    notebook: newNotebook,
-                    status: 'success',
-                    msg: 'update default notebook successfully !',
-                });
             }
+
+            const newNotebook = await Notebook.findOneAndUpdate(
+                { _id: id, uid },
+                {
+                    name,
+                    isDefault,
+                    isShortcut,
+                },
+                { new: true }
+            );
+            res.status(200).json({
+                data: newNotebook,
+                status: 'success',
+                msg: 'update name notebook successfully !',
+            });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

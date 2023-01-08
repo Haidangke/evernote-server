@@ -28,6 +28,10 @@ const noteSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        isShortcut: {
+            default: false,
+            type: Boolean,
+        },
         contain: {
             type: [String],
             enum: ['nothing', 'code', 'image', 'url', 'email', 'date'],

@@ -10,9 +10,7 @@ const noteController = {
             const uid = req.user.uid;
             const noteId = req.params.id;
 
-            const note = await Note.findOne({ _id: noteId, uid })
-                .populate('tags')
-                .populate('notebook');
+            const note = await Note.findOne({ _id: noteId, uid }).populate('tags');
             const todo = await Todo.find({ noteId });
             return res.status(200).json({
                 data: { ...note._doc, todo },
@@ -28,7 +26,7 @@ const noteController = {
             const uid = req.user.uid;
 
             const query = req.query;
-            const features = new noteAPIfeatures(Note.find({ uid }), query)
+            const features = new noteAPIfeatures(Note.find({ uid }).populate('tags'), query)
                 .pagination()
                 .sort()
                 .search()
@@ -50,11 +48,13 @@ const noteController = {
     createNote: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const { notebookId } = req.body;
-            let notebook = notebookId;
+            let { notebookId, contain, content, createdAt, isTrash, tags, title } = req.body;
+
+            console.log({ contain, content, createdAt, isTrash, tags, title });
+
             if (!notebookId) {
                 const notebookDefault = await Notebook.findOne({ uid, isDefault: true });
-                notebook = notebookDefault.id;
+                notebookId = notebookDefault.id;
             }
 
             if (!uid) {
@@ -63,10 +63,18 @@ const noteController = {
 
             const note = new Note({
                 uid,
-                notebook,
+                notebook: notebookId,
+                contain,
+                content,
+                createdAt,
+                isTrash,
+                tags,
+                title,
             });
+
             await note.save();
             delete note._doc.uid;
+
             return res.status(200).json({
                 data: note,
                 status: 'success',
@@ -80,7 +88,8 @@ const noteController = {
     updateNote: async (req: Request, res: Response) => {
         try {
             const noteId = req.params.id;
-            const { title, content, tags, notebook, isDelete, contain, isTrash } = req.body;
+            const { title, content, tags, notebook, isDelete, contain, isTrash, isShortcut } =
+                req.body;
 
             const note = await Note.findByIdAndUpdate(
                 noteId,
@@ -92,9 +101,10 @@ const noteController = {
                     isDelete,
                     contain,
                     isTrash,
+                    isShortcut,
                 },
                 { new: true }
-            );
+            ).populate('tags');
 
             return res
                 .status(200)
@@ -119,11 +129,11 @@ const noteController = {
         }
     },
 
-    cleanTrash: async (req: IGetUserAuthInfoRequest, res: Response) => {
+    deleteManyNote: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            await Note.deleteMany({ uid, isDelete: true });
-            res.status(200).json({ status: 'success', msg: 'delete multi successfully !' });
+            await Note.deleteMany({ uid, isTrash: true });
+            res.status(200).json({ status: 'success', msg: 'Đã dọn sạch thùng rác !' });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });
         }

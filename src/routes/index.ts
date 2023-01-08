@@ -8,7 +8,6 @@ import userRoute from './userRoute';
 import authRoute from './authRoute';
 import todoRoute from './todoRoute';
 import notebookRoute from './notebookRoute';
-import shortcutRoute from './shortcutRoute';
 
 const router = express.Router();
 
@@ -18,6 +17,5 @@ router.use('/note', verifyToken, validUser, noteRoute);
 router.use('/tag', verifyToken, validUser, tagRoute);
 router.use('/todo', verifyToken, validUser, todoRoute);
 router.use('/notebook', verifyToken, validUser, notebookRoute);
-router.use('/shortcut', verifyToken, validUser, shortcutRoute);
 
 export default router;

@@ -29,7 +29,7 @@ const authController = {
             res.status(500).json({ status: 'failed', msg: error.message });
         }
     },
-    
+
     //Register
     register: async (req: Request, res: Response) => {
         try {
@@ -38,13 +38,13 @@ const authController = {
             if (password.length < 6)
                 return res.status(400).json({
                     status: 'failed',
-                    msg: 'password must be more than 6 characters !',
+                    msg: 'Mật khẩu tối thiếu 6 kí tự',
                 });
 
             if (!password || !email || !username) {
                 return res.status(400).json({
                     status: 'failed',
-                    msg: 'invalid user information !',
+                    msg: 'Thông tin tài khoản không hợp lệ',
                 });
             }
 
@@ -57,7 +57,7 @@ const authController = {
             if (user)
                 return res.status(400).json({
                     status: 'failed',
-                    msg: 'Email này đã được sử dụng.',
+                    msg: 'Email này đã được sử dụng',
                 });
 
             const newUser = new UserModel({
@@ -66,8 +66,10 @@ const authController = {
                 password: hashPassword,
             });
             await newUser.save();
+
             //Create Notebook
             const notebook = new Notebook({
+                creator: email,
                 uid: newUser.id,
                 name: 'Sổ tay Đầu tiên',
                 isDefault: true,
@@ -76,7 +78,7 @@ const authController = {
             delete newUser._doc.password;
             res.status(200).json({
                 status: 'failed',
-                msg: 'successful account registration !',
+                msg: 'Đăng kí tài khoản thành công',
                 data: newUser,
             });
         } catch (error) {

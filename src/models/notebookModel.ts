@@ -20,6 +20,10 @@ const notebookSchema = new Schema(
             type: String,
             required: true,
         },
+        isShortcut: {
+            default: false,
+            type: Boolean,
+        },
     },
     {
         timestamps: true,
