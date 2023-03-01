@@ -1,213 +1,177 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import asyncHandler from 'express-async-handler';
 
+import { generatorAccessToken, generatorRefreshToken } from '../utils/tokenHandler';
 import UserModel from '../models/userModel';
-import Notebook from '../models/notebookModel';
-import { User } from '../middleware/verifyToken';
-
-let refreshTokens = [];
+import { IGetUserAuthInfoRequest, User } from '../middleware/verifyToken';
 
 const authController = {
-    checkEmail: async (req: Request, res: Response) => {
-        try {
-            const { email } = req.body;
-            const user = await UserModel.findOne({ email });
-            if (!user) {
-                res.status(400).json({
-                    status: 'failed',
-                    msg: 'Email này đã chưa đăng kí tài khoản.',
-                    data: false,
-                });
-            } else {
-                res.status(200).json({
-                    status: 'success',
-                    data: true,
-                });
-            }
-        } catch (error) {
-            res.status(500).json({ status: 'failed', msg: error.message });
+    checkEmail: asyncHandler(async (req: Request, res: Response) => {
+        const { email } = req.body;
+        const user = await UserModel.findOne({ email });
+        if (!user) {
+            res.status(400).json({
+                status: 'failed',
+                msg: 'Email này đã chưa đăng kí tài khoản.',
+                data: false,
+            });
+        } else {
+            res.status(200).json({
+                status: 'success',
+                data: true,
+            });
         }
-    },
+    }),
 
     //Register
-    register: async (req: Request, res: Response) => {
-        try {
-            const { password, email, username } = req.body;
+    register: asyncHandler(async (req: Request, res: Response): Promise<any> => {
+        const { password, email, username } = req.body;
 
-            if (password.length < 6)
-                return res.status(400).json({
-                    status: 'failed',
-                    msg: 'Mật khẩu tối thiếu 6 kí tự',
-                });
-
-            if (!password || !email || !username) {
-                return res.status(400).json({
-                    status: 'failed',
-                    msg: 'Thông tin tài khoản không hợp lệ',
-                });
-            }
-
-            const salt = await bcrypt.genSalt();
-            const hashPassword = await bcrypt.hash(password, salt);
-
-            //Create user
-            const user = await UserModel.findOne({ email });
-
-            if (user)
-                return res.status(400).json({
-                    status: 'failed',
-                    msg: 'Email này đã được sử dụng',
-                });
-
-            const newUser = new UserModel({
-                username,
-                email,
-                password: hashPassword,
-            });
-            await newUser.save();
-
-            //Create Notebook
-            const notebook = new Notebook({
-                creator: email,
-                uid: newUser.id,
-                name: 'Sổ tay Đầu tiên',
-                isDefault: true,
-            });
-            await notebook.save();
-            delete newUser._doc.password;
-            res.status(200).json({
+        if (!password || !email || !username) {
+            return res.status(400).json({
                 status: 'failed',
-                msg: 'Đăng kí tài khoản thành công',
-                data: newUser,
+                msg: 'Thông tin tài khoản không hợp lệ',
             });
-        } catch (error) {
-            res.status(500).json({ status: 'failed', msg: error.message });
         }
-    },
-    generatorAccessToken(user) {
-        const accessToken = jwt.sign(
-            {
-                uid: user._id,
-                role: user.role,
-            },
-            process.env.JWT_ACCESS_KEY,
-            { expiresIn: '1d' }
-        );
-        return accessToken;
-    },
 
-    generatorRefreshToken(user) {
-        const refreshToken = jwt.sign(
-            {
-                uid: user._id,
-                role: user.role,
-            },
-            process.env.JWT_REFRESH_KEY,
-            { expiresIn: '7d' }
-        );
-        return refreshToken;
-    },
+        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+            return res.status(400).json({
+                status: 'failed',
+                msg: 'Please enter a valid email',
+            });
+        }
+
+        const salt = await bcrypt.genSalt();
+        const hashPassword = await bcrypt.hash(password, salt);
+
+        //Create user
+        const existingUser = await UserModel.findOne({ email });
+
+        if (existingUser)
+            return res.status(400).json({
+                status: 'failed',
+                msg: 'Email này đã được sử dụng',
+            });
+
+        const user = new UserModel({
+            username,
+            email,
+            password: hashPassword,
+        });
+        await user.save();
+
+        //Create Notebook
+        res.status(200).json({
+            status: 'failed',
+            msg: 'Đăng kí tài khoản thành công',
+        });
+    }),
 
     //Login
-    login: async (req: Request, res: Response) => {
-        try {
-            const { password, email } = req.body;
-            const user = await UserModel.findOne({ email });
+    login: asyncHandler(async (req: Request, res: Response): Promise<any> => {
+        const { password, email } = req.body;
+        const user = await UserModel.findOne({ email });
 
-            if (user) {
-                const comparePassword = await bcrypt.compare(password, user.password);
+        if (user) {
+            const comparePassword = await bcrypt.compare(password, user.password);
 
-                if (comparePassword) {
-                    const accessToken = authController.generatorAccessToken(user);
-                    const refreshToken = authController.generatorRefreshToken(user);
-                    refreshTokens.push(refreshToken);
+            if (comparePassword) {
+                const accessToken = generatorAccessToken(user);
+                const refreshToken = generatorRefreshToken(user);
 
-                    res.cookie('refreshToken', refreshToken, {
-                        httpOnly: true,
-                        path: '/',
-                        sameSite: 'strict',
-                        secure: false,
-                        maxAge: 90000,
-                    });
+                await UserModel.findOneAndUpdate(
+                    { _id: user._id },
+                    { $push: { refreshTokens: refreshToken } },
+                    { new: true }
+                );
 
-                    delete user._doc.password;
-                    delete user._doc._id;
-                    return res.status(200).json({
-                        status: 'sucess',
-                        msg: 'logged in successfully !',
-                        data: accessToken,
-                    });
-                } else {
-                    //mật khẩu sai
-                    return res.status(401).json({
-                        status: 'failed',
-                        msg: 'Email hoặc mật khẩu không chính xác.',
-                    });
-                }
-            } else {
-                // không có tài khoản
-                return res.status(401).json({
-                    status: 'failed',
-                    msg: 'Email này chưa đăng kí tài khoản.',
-                });
-            }
-        } catch (error) {
-            res.status(500).json({ status: 'failed', msg: error.message });
-        }
-    },
-
-    logout: async (req: Request, res: Response) => {
-        try {
-            res.clearCookie('refreshToken');
-            refreshTokens = refreshTokens.filter((token) => token !== req.cookies.refreshToken);
-            res.status(200).json({ status: 'success', msg: 'logged out !' });
-        } catch (error) {
-            res.status(500).json({ status: 'failed', msg: error.message });
-        }
-    },
-
-    requestRefreshToken: async (req: Request, res: Response) => {
-        try {
-            const refreshToken = req.cookies['refreshToken'];
-            if (!refreshToken)
-                return res
-                    .status(401)
-                    .json({ status: 'failed', msg: 'you are not refreshToken !' });
-
-            // if (!refreshTokens.includes(refreshToken))
-            //     return res
-            //         .status(403)
-            //         .json({ status: 'failed', msg: 'refresh token is not valid !' });
-
-            jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (error, user: User) => {
-                const newUser = {
-                    role: user.role,
-                    _id: user.uid,
-                };
-                if (error) {
-                    return res
-                        .status(403)
-                        .json({ status: 'failed', msg: 'refresh token is not valid !' });
-                }
-                refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-
-                const newAccessToken = authController.generatorAccessToken(newUser);
-                const newRefreshToken = authController.generatorRefreshToken(newUser);
-                refreshTokens.push(newRefreshToken);
-
-                res.cookie('refreshToken', newRefreshToken, {
+                res.cookie('refreshToken', refreshToken, {
                     httpOnly: true,
                     path: '/',
+                    sameSite: 'strict',
                     secure: false,
+                    maxAge: 90000,
                 });
 
-                res.status(200).json({ status: 'success', data: newAccessToken });
+                return res.status(200).json({
+                    status: 'sucess',
+                    msg: 'logged in successfully !',
+                    data: accessToken,
+                });
+            } else {
+                //mật khẩu sai
+                return res.status(401).json({
+                    status: 'failed',
+                    msg: 'Email hoặc mật khẩu không chính xác.',
+                });
+            }
+        } else {
+            // không có tài khoản
+            return res.status(401).json({
+                status: 'failed',
+                msg: 'Email này chưa đăng kí tài khoản.',
             });
-        } catch (error) {
-            res.status(500).json({ status: 'failed', msg: error.message });
         }
-    },
+    }),
+
+    logout: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
+        // const uid = req.user.uid;
+        const refreshToken = req.cookies['refreshToken'];
+        try {
+            const { uid } = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY) as User;
+
+            res.clearCookie('refreshToken');
+            await UserModel.findOneAndUpdate(
+                { _id: uid },
+                { $pull: { refreshToken: refreshToken } },
+                { new: true }
+            );
+            res.status(200).json({ status: 'success', msg: 'logged out !' });
+        } catch (error) {
+            return res.status(403).json({ status: 'failed', msg: 'refresh token is not valid !' });
+        }
+    }),
+
+    requestRefreshToken: asyncHandler(async (req: Request, res: Response): Promise<any> => {
+        const refreshToken = req.cookies['refreshToken'];
+        if (!refreshToken)
+            return res.status(401).json({ status: 'failed', msg: 'you are not refreshToken !' });
+
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY) as User;
+            const user = {
+                role: decoded.role,
+                _id: decoded.uid,
+            };
+
+            await UserModel.findOneAndUpdate(
+                { _id: user._id },
+                { $pull: { refreshToken: refreshToken } },
+                { new: true }
+            );
+
+            const newAccessToken = generatorAccessToken(user);
+            const newRefreshToken = generatorRefreshToken(user);
+
+            await UserModel.findOneAndUpdate(
+                { _id: user._id },
+                { $push: { refreshTokens: newRefreshToken } },
+                { new: true }
+            );
+
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                path: '/',
+                secure: false,
+            });
+
+            res.status(200).json({ status: 'success', data: newAccessToken });
+        } catch (error) {
+            return res.status(403).json({ status: 'failed', msg: 'refresh token is not valid !' });
+        }
+    }),
 };
 
 export default authController;

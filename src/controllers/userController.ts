@@ -8,8 +8,10 @@ const userController = {
             const uid = req.user.uid;
             const user = await UserModel.findById(uid);
 
-            delete user._doc.password;
-            delete user._doc._id;
+            user.password = undefined;
+            user.refreshTokens = undefined;
+            user._id = undefined;
+
             res.status(200).json({
                 status: 'success',
                 msg: 'get info user successfully',

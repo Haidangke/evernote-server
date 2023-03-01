@@ -1,4 +1,5 @@
 import { Response } from 'express';
+
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
 import Note from '../models/noteModel';
 import Tag from '../models/tagModel';
@@ -8,12 +9,12 @@ const tagController = {
     getTag: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const listTag = await Tag.find({ uid }).sort('-createdAt');
+            const tags = await Tag.find({ uid }).sort('-createdAt');
 
             res.status(200).json({
-                data: listTag,
+                data: tags,
                 status: 'success',
-                msg: 'create tag successfully !',
+                msg: 'get all tag successfully !',
             });
         } catch (error) {
             res.status(500).json({ status: 'failed', msg: error.message });

@@ -1,9 +1,17 @@
 import { Schema, model } from 'mongoose';
-import { tagSchema } from './tagModel';
 
 const Types = Schema.Types;
 
-const noteSchema = new Schema(
+interface INote extends Document {
+    uid: string;
+    title: string;
+    content: string;
+    tag: string[];
+    isTrash: boolean;
+    isShortcut: boolean;
+}
+
+const NoteSchema: Schema = new Schema(
     {
         uid: {
             type: Types.ObjectId,
@@ -32,19 +40,12 @@ const noteSchema = new Schema(
             default: false,
             type: Boolean,
         },
-        contain: {
-            type: [String],
-            enum: ['nothing', 'code', 'image', 'url', 'email', 'date'],
-            default: ['nothing'],
-        },
     },
     {
         timestamps: true,
     }
 );
 
-noteSchema.index({ title: 'text' });
-const Note = model('Note', noteSchema);
+const Note = model<INote>('Note', NoteSchema);
 
-Note.createIndexes({ title: 'text' });
 export default Note;

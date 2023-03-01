@@ -25,23 +25,25 @@ const notebookController = {
     createNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
         try {
             const uid = req.user.uid;
-            const user = await User.findById(uid);
-            const email = user.email;
             const { name, creator } = req.body;
+
             if (!name || !creator)
                 return res.status(400).json({
                     status: 'failed',
                     msg: 'thông tin của sổ tay không hợp lệ.',
                 });
-            const notebook = await Notebook.findOne({ name });
+            const notebook = await Notebook.findOne({ name, uid });
             if (notebook)
                 return res.status(400).json({ status: 'failed', msg: 'sổ tay này đã tồn tại.' });
-            const newNotebook = new Notebook({ uid, name, creator: email });
+
+            const newNotebook = new Notebook({ uid, name, creator });
             await newNotebook.save();
-            delete newNotebook._doc.uid;
+
+            const notebookRes = newNotebook.toObject();
+            delete notebookRes.uid;
 
             res.status(200).json({
-                data: newNotebook,
+                data: notebookRes,
                 status: 'success',
                 msg: 'tạo sổ tay thành công.',
             });

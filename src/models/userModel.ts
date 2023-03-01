@@ -1,18 +1,23 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, Document } from 'mongoose';
+import NotebookModel from './notebookModel';
 
-const userSchema = new Schema(
+interface IUser extends Document {
+    email: string;
+    username: string;
+    password: string;
+    avatar: string;
+    role: string;
+    scratch: string;
+    refreshTokens: string[];
+}
+
+const UserSchema: Schema = new Schema(
     {
         email: {
             type: String,
             required: true,
             unique: true,
             trim: true,
-            validate: {
-                validator: function (v) {
-                    return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v);
-                },
-                message: 'Please enter a valid email',
-            },
         },
         username: {
             type: String,
@@ -39,9 +44,29 @@ const userSchema = new Schema(
             type: String,
             default: '',
         },
+        refreshTokens: [
+            {
+                type: String,
+            },
+        ],
     },
     { timestamps: true }
 );
 
-const User = model('User', userSchema);
+UserSchema.pre<IUser>('save', async function (next) {
+    try {
+        const notebook = new NotebookModel({
+            creator: this.email,
+            uid: this._id,
+            name: 'Sổ tay Đầu tiên',
+            isDefault: true,
+        });
+
+        await notebook.save();
+    } catch (error) {
+        next(error);
+    }
+});
+
+const User = model<IUser>('User', UserSchema);
 export default User;

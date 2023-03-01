@@ -1,10 +1,17 @@
-import { model, Schema } from 'mongoose';
-const Types = Schema.Types;
+import { Document, model, Schema } from 'mongoose';
 
-const notebookSchema = new Schema(
+interface INotebook extends Document {
+    uid: string;
+    name: string;
+    isDefault: boolean;
+    creator: string;
+    isShortcut: boolean;
+}
+
+const NotebookSchema: Schema = new Schema(
     {
         uid: {
-            type: Types.ObjectId,
+            type: Schema.Types.ObjectId,
             required: true,
         },
         name: {
@@ -30,5 +37,5 @@ const notebookSchema = new Schema(
     }
 );
 
-const Notebook = model('Notebook', notebookSchema);
+const Notebook = model<INotebook>('Notebook', NotebookSchema);
 export default Notebook;
