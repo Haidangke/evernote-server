@@ -3,11 +3,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
-import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 
 import router from './routes';
-import errorHandler from './utils/errorHandler';
+import errorHandler from './handlers/errorHandler';
+import connectDB from './utils/connectDB';
+import scheduleNotify from './utils/scheduleNotify';
+
 dotenv.config();
 
 const app = express();
@@ -27,11 +29,7 @@ app.use(bodyParser.urlencoded({ extended: false, limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
 //database
-const MONGO_URL = process.env.MONGODB_URL;
-mongoose
-    .connect(MONGO_URL, { autoIndex: false })
-    .then(() => console.log(`Connect MongoDB successfully with URI: ${MONGO_URL} !`))
-    .catch((error) => console.log(error));
+connectDB();
 
 //routes
 app.use('/api', router);
@@ -40,5 +38,6 @@ app.use(errorHandler);
 //start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
+    scheduleNotify();
     console.log('App is running on PORT: ' + PORT);
 });

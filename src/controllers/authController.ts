@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
 
-import { generatorAccessToken, generatorRefreshToken } from '../utils/tokenHandler';
+import { generatorAccessToken, generatorRefreshToken } from '../handlers/tokenHandler';
 import UserModel from '../models/userModel';
 import { IGetUserAuthInfoRequest, User } from '../middleware/verifyToken';
 
@@ -64,14 +64,14 @@ const authController = {
 
         //Create Notebook
         res.status(200).json({
-            status: 'failed',
+            status: 'success',
             msg: 'Đăng kí tài khoản thành công',
         });
     }),
 
     //Login
     login: asyncHandler(async (req: Request, res: Response): Promise<any> => {
-        const { password, email } = req.body;
+        const { password, email, deviceToken } = req.body;
         const user = await UserModel.findOne({ email });
 
         if (user) {
@@ -83,7 +83,7 @@ const authController = {
 
                 await UserModel.findOneAndUpdate(
                     { _id: user._id },
-                    { $push: { refreshTokens: refreshToken } },
+                    { $push: { refreshTokens: refreshToken }, deviceToken },
                     { new: true }
                 );
 
@@ -125,7 +125,7 @@ const authController = {
             res.clearCookie('refreshToken');
             await UserModel.findOneAndUpdate(
                 { _id: uid },
-                { $pull: { refreshToken: refreshToken } },
+                { $pull: { refreshToken: refreshToken }, $unset: { deviceToken: 1 } },
                 { new: true }
             );
             res.status(200).json({ status: 'success', msg: 'logged out !' });

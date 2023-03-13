@@ -7,13 +7,14 @@ import { Note, Notebook } from '../models';
 const noteController = {
     getAllNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
         const uid = req.user.uid;
-        const notes = await Note.find({ uid });
+        const notes = await Note.find({ uid }).populate('tags');
 
         return res.json({ data: notes, status: 'success', msg: 'get notes successfully !' });
     }),
     createNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
         const uid = req.user.uid;
         const body = req.body;
+        console.log({body})
         const notebookDefault = await Notebook.findOne({ uid, isDefault: true });
 
         const note = new Note({

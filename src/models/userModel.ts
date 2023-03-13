@@ -9,6 +9,7 @@ interface IUser extends Document {
     role: string;
     scratch: string;
     refreshTokens: string[];
+    deviceToken: string;
 }
 
 const UserSchema: Schema = new Schema(
@@ -49,6 +50,7 @@ const UserSchema: Schema = new Schema(
                 type: String,
             },
         ],
+        deviceToken: String,
     },
     { timestamps: true }
 );
