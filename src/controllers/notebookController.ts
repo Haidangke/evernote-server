@@ -1,14 +1,13 @@
 import { Response } from 'express';
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
-import { Note, User } from '../models';
-import Notebook from '../models/notebookModel';
+import { NoteModel, UserModel, NotebookModel } from '../models';
 
 const notebookController = {
     getNotebook: async (req: IGetUserAuthInfoRequest, res: Response) => {
         const uid = req.user.uid;
 
         try {
-            const data = await Notebook.find({ uid }).sort('-createdAt');
+            const data = await NotebookModel.find({ uid }).sort('-createdAt');
             const notebooks = [...data];
             for (let i = 0; i < notebooks.length; i++) {
                 notebooks[i].uid = null;
@@ -32,11 +31,11 @@ const notebookController = {
                     status: 'failed',
                     msg: 'thông tin của sổ tay không hợp lệ.',
                 });
-            const notebook = await Notebook.findOne({ name, uid });
+            const notebook = await NotebookModel.findOne({ name, uid });
             if (notebook)
                 return res.status(400).json({ status: 'failed', msg: 'sổ tay này đã tồn tại.' });
 
-            const newNotebook = new Notebook({ uid, name, creator });
+            const newNotebook = new NotebookModel({ uid, name, creator });
             await newNotebook.save();
 
             const notebookRes = newNotebook.toObject();
@@ -59,7 +58,7 @@ const notebookController = {
             const { name, isDefault, isShortcut } = req.body;
 
             if (isDefault) {
-                await Notebook.updateMany(
+                await NotebookModel.updateMany(
                     { uid, isDefault: true },
                     {
                         isDefault: false,
@@ -67,7 +66,7 @@ const notebookController = {
                 );
             }
 
-            const newNotebook = await Notebook.findOneAndUpdate(
+            const newNotebook = await NotebookModel.findOneAndUpdate(
                 { _id: id, uid },
                 {
                     name,
@@ -91,7 +90,7 @@ const notebookController = {
             const uid = req.user.uid;
             const id = req.params.id;
 
-            const notebook = await Notebook.findOne({ _id: id, uid });
+            const notebook = await NotebookModel.findOne({ _id: id, uid });
             const isDefault = notebook.isDefault;
 
             if (isDefault) {
@@ -99,8 +98,8 @@ const notebookController = {
                     .status(400)
                     .json({ status: 'failed', msg: 'you cannot delete the default notebook !' });
             }
-            await Notebook.findOneAndRemove({ _id: id, uid });
-            await Note.deleteMany({ notebook: id });
+            await NotebookModel.findOneAndRemove({ _id: id, uid });
+            await NoteModel.deleteMany({ notebook: id });
 
             res.status(200).json({ status: 'success', msg: 'delete notebook successfully !' });
         } catch (error) {

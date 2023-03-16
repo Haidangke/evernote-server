@@ -9,9 +9,7 @@ interface INote extends Document {
     tag: string[];
     isTrash: boolean;
     isShortcut: boolean;
-    reminder: {
-        date: string;
-    };
+    reminder: string;
 }
 
 const NoteSchema: Schema = new Schema(
@@ -49,6 +47,6 @@ const NoteSchema: Schema = new Schema(
         timestamps: true,
     }
 );
-const Note = model<INote>('Note', NoteSchema);
+const NoteModel = model<INote>('Note', NoteSchema);
 
-export default Note;
+export default NoteModel;

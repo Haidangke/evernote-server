@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import router from './routes';
 import errorHandler from './handlers/errorHandler';
 import connectDB from './utils/connectDB';
-import scheduleNotify from './utils/scheduleNotify';
+import scheduleService from './services/scheduleService';
 
 dotenv.config();
 
@@ -22,7 +22,6 @@ app.use(
         credentials: true,
     })
 );
-
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false, limit: '50mb' }));
@@ -35,9 +34,9 @@ connectDB();
 app.use('/api', router);
 app.use(errorHandler);
 
+scheduleService.reScheduleds();
 //start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    scheduleNotify();
     console.log('App is running on PORT: ' + PORT);
 });

@@ -1,23 +1,23 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import asyncHandler from 'express-async-handler';
 
 import { IGetUserAuthInfoRequest } from '../middleware/verifyToken';
-import { Note, Notebook } from '../models';
+import { NoteModel, NotebookModel } from '../models';
+import scheduleService from '../services/scheduleService';
 
 const noteController = {
     getAllNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
         const uid = req.user.uid;
-        const notes = await Note.find({ uid }).populate('tags');
+        const notes = await NoteModel.find({ uid }).populate('tags');
 
         return res.json({ data: notes, status: 'success', msg: 'get notes successfully !' });
     }),
     createNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
         const uid = req.user.uid;
         const body = req.body;
-        console.log({body})
-        const notebookDefault = await Notebook.findOne({ uid, isDefault: true });
+        const notebookDefault = await NotebookModel.findOne({ uid, isDefault: true });
 
-        const note = new Note({
+        const note = new NoteModel({
             uid,
             notebook: body.notebookId || notebookDefault._id,
             ...body,
@@ -33,13 +33,29 @@ const noteController = {
         });
     }),
 
-    updateNote: asyncHandler(async (req: Request, res: Response): Promise<any> => {
+    updateNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
+        const uid = req.user.uid;
         const noteId = req.params.id;
         const body = req.body;
-
-        const note = await Note.findByIdAndUpdate(noteId, { ...body }, { new: true }).populate(
+        const { reminder, token } = req.body;
+        console.log(body);
+        const note = await NoteModel.findByIdAndUpdate(noteId, { ...body }, { new: true }).populate(
             'tags'
         );
+
+        if (reminder) {
+            await scheduleService.updateScheduled(
+                {
+                    date: reminder,
+                    title: note.title,
+                    body: 'Co thong bao moi',
+                    noteId,
+                    link: `/note/${noteId}`,
+                    uid,
+                },
+                token
+            );
+        }
 
         return res.status(200).json({ data: note, status: 'success', message: 'note is updated' });
     }),
@@ -47,8 +63,8 @@ const noteController = {
     deleteNote: asyncHandler(async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
         const uid = req.user.uid;
         const noteId = req.params.id;
-        await Note.findOneAndDelete({ _id: noteId, uid });
-
+        await NoteModel.findOneAndDelete({ _id: noteId, uid });
+        await scheduleService.deleteScheduled(noteId);
         res.status(200).json({
             status: 'success',
             msg: 'note is deleted !',
@@ -58,7 +74,7 @@ const noteController = {
     deleteManyNote: asyncHandler(
         async (req: IGetUserAuthInfoRequest, res: Response): Promise<any> => {
             const uid = req.user.uid;
-            await Note.deleteMany({ uid, isTrash: true });
+            await NoteModel.deleteMany({ uid, isTrash: true });
             res.status(200).json({ status: 'success', msg: 'all note is deleted !' });
         }
     ),
