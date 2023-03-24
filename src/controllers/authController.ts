@@ -6,6 +6,7 @@ import asyncHandler from 'express-async-handler';
 import { generatorAccessToken, generatorRefreshToken } from '../handlers/tokenHandler';
 import UserModel from '../models/userModel';
 import { IGetUserAuthInfoRequest, User } from '../middleware/verifyToken';
+import ScheduledModel from '../models/scheduleModel';
 
 const authController = {
     checkEmail: asyncHandler(async (req: Request, res: Response) => {
@@ -86,6 +87,8 @@ const authController = {
                     { $push: { refreshTokens: refreshToken }, deviceToken },
                     { new: true }
                 );
+
+                await ScheduledModel.updateMany({ uid: user._id }, { token: deviceToken });
 
                 res.cookie('refreshToken', refreshToken, {
                     httpOnly: true,

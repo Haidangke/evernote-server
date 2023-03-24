@@ -20,7 +20,6 @@ admin.initializeApp({
 const firebaseAdmin = {} as FirebaseAdmin;
 
 firebaseAdmin.sendNotification = function (payload) {
-    console.log({ notification: payload });
     const message = {
         notification: {
             title: payload.title,
@@ -29,7 +28,7 @@ firebaseAdmin.sendNotification = function (payload) {
         token: payload.token,
         webpush: {
             fcmOptions: {
-                link: '/note/' + payload.link,
+                link: payload.link,
             },
         },
     };

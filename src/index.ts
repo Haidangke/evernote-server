@@ -34,7 +34,7 @@ connectDB();
 app.use('/api', router);
 app.use(errorHandler);
 
-scheduleService.reScheduleds();
+scheduleService.reSchedules();
 //start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

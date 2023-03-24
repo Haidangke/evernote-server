@@ -38,19 +38,17 @@ const noteController = {
         const noteId = req.params.id;
         const body = req.body;
         const { reminder, token } = req.body;
-        console.log(body);
         const note = await NoteModel.findByIdAndUpdate(noteId, { ...body }, { new: true }).populate(
             'tags'
         );
-
         if (reminder) {
-            await scheduleService.updateScheduled(
+            await scheduleService.updateSchedule(
                 {
                     date: reminder,
-                    title: note.title,
-                    body: 'Co thong bao moi',
+                    title: 'Noteke',
+                    body: `Có thông báo mới từ ghi chú ${note.title || 'Chưa có tiêu đề'}`,
                     noteId,
-                    link: `/note/${noteId}`,
+                    link: `/note?n=${noteId}`,
                     uid,
                 },
                 token
@@ -64,7 +62,7 @@ const noteController = {
         const uid = req.user.uid;
         const noteId = req.params.id;
         await NoteModel.findOneAndDelete({ _id: noteId, uid });
-        await scheduleService.deleteScheduled(noteId);
+        await scheduleService.deleteSchedule(noteId);
         res.status(200).json({
             status: 'success',
             msg: 'note is deleted !',

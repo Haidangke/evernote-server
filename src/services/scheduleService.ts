@@ -1,7 +1,7 @@
 import scheduleLib from 'node-schedule';
 
 import firebaseAdmin from '../firebase/firebaseAdmin';
-import ScheduledModel from '../models/scheduledModel';
+import scheduleModel from '../models/scheduleModel';
 
 interface Schedule {
     date: any;
@@ -34,7 +34,6 @@ const scheduleService = {
     createJob(jobId: string, payload: JobPayload) {
         const { date, title, body, link, token } = payload;
         scheduleLib.scheduleJob(jobId, date, async () => {
-            console.log('log scheduled');
             const payload = {
                 token,
                 title,
@@ -50,50 +49,56 @@ const scheduleService = {
         this.createJob(jobId, payload);
     },
 
-    updateScheduled: async (data: Schedule, token: string) => {
+    updateSchedule: async (data: Schedule, token: string) => {
         const { date, title, body, noteId, link, uid } = data;
         try {
-            const scheduledExisting = await ScheduledModel.findOne({ noteId });
+            const scheduleExisting = await scheduleModel.findOne({ noteId });
 
             const jobPayload = { date, title, body, link, token };
-            if (scheduledExisting) {
-                const scheduledId = scheduledExisting._id.toString();
-                await ScheduledModel.findOneAndUpdate({ noteId }, { date, title, body, link });
-                scheduleService.updateJob(scheduledId, jobPayload);
+            if (scheduleExisting) {
+                const scheduleId = scheduleExisting._id.toString();
+                await scheduleModel.findOneAndUpdate({ noteId }, jobPayload);
+                scheduleService.updateJob(scheduleId, jobPayload);
             } else {
-                const scheduled = await ScheduledModel.create({
+                const schedule = await scheduleModel.create({
                     noteId,
                     uid,
                     date,
                     title,
                     body,
+                    token,
+                    link,
                 });
-                scheduleService.createJob(scheduled._id.toString(), jobPayload);
+                scheduleService.createJob(schedule._id.toString(), jobPayload);
             }
         } catch (error) {
             throw error;
         }
     },
 
-    reScheduleds: async function () {
+    reSchedules: async function () {
         try {
-            const schedules = await ScheduledModel.find({});
+            const schedules = await scheduleModel.find({});
             schedules.forEach(async (schedule) => {
+                console.log({ schedule });
                 const scheduleId = schedule._id.toString();
                 const scheduleTimeout = schedule.date;
+                const token = schedule.token;
+                const link = schedule.link;
 
                 if (scheduleTimeout > new Date()) {
                     scheduleLib.scheduleJob(scheduleId, scheduleTimeout, () => {
                         const payload = {
-                            token: '',
+                            token,
                             title: schedule.title,
                             body: schedule.body,
-                            link: '',
+                            link,
                         };
                         return firebaseAdmin.sendNotification(payload);
                     });
                 } else {
-                    await ScheduledModel.findByIdAndRemove(scheduleId);
+                    scheduleService.deleteJob(scheduleId);
+                    await scheduleModel.findByIdAndRemove(scheduleId);
                 }
             });
         } catch (e) {
@@ -101,33 +106,13 @@ const scheduleService = {
         }
     },
 
-    deleteScheduled: async (noteId: string) => {
+    deleteSchedule: async (noteId: string) => {
         try {
-            const scheduled = await ScheduledModel.findOneAndDelete({ noteId });
-            scheduleService.deleteJob(scheduled._id.toStrings());
+            const schedule = await scheduleModel.findOneAndDelete({ noteId });
+            scheduleService.deleteJob(schedule._id.toStrings());
         } catch (e) {
             throw e;
         }
-    },
-
-    updateScheduleds: async (uid: string, token?: string) => {
-        const scheduleds = await ScheduledModel.find({ uid });
-
-        scheduleds.forEach((scheduled) => {
-            const scheduledId = scheduled._id.toString();
-            const { date, title, body, link } = scheduled;
-            if (token) {
-                scheduleService.updateJob(scheduledId, {
-                    date,
-                    title,
-                    body,
-                    link,
-                    token,
-                });
-            } else {
-                scheduleService.deleteJob(scheduledId);
-            }
-        });
     },
 };
 

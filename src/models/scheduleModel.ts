@@ -6,19 +6,26 @@ interface ISchedule extends Document {
     title: string;
     body: string;
     link: string;
+    token: string;
     date: Date;
 }
 
 const ScheduledSchema = new Schema({
     uid: {
         type: String,
+        required: true,
     },
     noteId: {
         type: String,
+        required: true,
+    },
+    token: {
+        type: String,
+        required: true,
     },
 
     title: {
-        type: Date,
+        type: String,
     },
     body: {
         type: String,
